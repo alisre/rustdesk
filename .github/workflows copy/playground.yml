@@ -87,9 +87,9 @@ jobs:
 
       - name: Checkout source code
         uses: actions/checkout@v3
-        # with:
-        #   ref: ${{ matrix.job.ref }}
-        #   submodules: recursive
+        with:
+          ref: ${{ matrix.job.ref }}
+          submodules: recursive
 
       - name: Import the codesign cert
         if: env.MACOS_P12_BASE64 != null
@@ -248,9 +248,9 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v3
-        # with:
-        #   ref: ${{ matrix.job.ref }}
-        #   submodules: recursive
+        with:
+          ref: ${{ matrix.job.ref }}
+          submodules: recursive
 
       - name: Install dependencies
         run: |
