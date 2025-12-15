@@ -1329,8 +1329,8 @@ jobs:
 
       - name: Checkout source code
         uses: actions/checkout@v4
-        # with:
-        #   submodules: recursive
+        with:
+          submodules: recursive
 
       - name: Set Swap Space
         if: ${{ matrix.job.arch == 'x86_64' }}
