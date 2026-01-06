@@ -56,7 +56,7 @@ fn main() {
     init_from_env(Env::default().filter_or(DEFAULT_FILTER_ENV, "info"));
     
     // For login mode, skip global_init to avoid GUI initialization
-    let is_login = matches.is_present("login") || matches.value_of("login").is_some();
+    let is_login = matches.is_present("login");
     if !is_login {
         if !common::global_init() {
             return;
@@ -112,7 +112,6 @@ fn main() {
             println!("Usage: rustdesk --login --username <USERNAME> --login-password <PASSWORD>");
             return;
         }
-        common::test_rendezvous_server();
         cli::login(username.to_owned(), password.to_owned());
     } else if matches.is_present("login") {
         let username = matches.value_of("username").unwrap_or("");
@@ -122,7 +121,6 @@ fn main() {
             println!("Usage: rustdesk --login --username <USERNAME> --login-password <PASSWORD>");
             return;
         }
-        common::test_rendezvous_server();
         cli::login(username.to_owned(), password.to_owned());
     } else if let Some(p) = matches.value_of("server") {
         log::info!("id={}", hbb_common::config::Config::get_id());
