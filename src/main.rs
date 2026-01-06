@@ -35,9 +35,6 @@ fn main() {
 
 #[cfg(feature = "cli")]
 fn main() {
-    if !common::global_init() {
-        return;
-    }
     use clap::App;
     use hbb_common::log;
     let args = format!(
@@ -57,6 +54,14 @@ fn main() {
         .get_matches();
     use hbb_common::{config::LocalConfig, env_logger::*};
     init_from_env(Env::default().filter_or(DEFAULT_FILTER_ENV, "info"));
+    
+    // For login mode, skip global_init to avoid GUI initialization
+    let is_login = matches.is_present("login") || matches.value_of("login").is_some();
+    if !is_login {
+        if !common::global_init() {
+            return;
+        }
+    }
     if let Some(p) = matches.value_of("port-forward") {
         let options: Vec<String> = p.split(":").map(|x| x.to_owned()).collect();
         if options.len() < 3 {
