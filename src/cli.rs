@@ -191,3 +191,103 @@ pub async fn start_one_port_forward(
     }
     log::info!("port forward (:{}) exit", port);
 }
+
+pub fn login(username: String, password: String) {
+    use hbb_common::config::LocalConfig;
+    use serde_json::json;
+    
+    log::info!("Attempting to login with username: {}", username);
+    
+    // Get API server
+    let api_server = hbb_common::config::Config::get_option("api-server");
+    if api_server.is_empty() {
+        log::error!("API server not configured");
+        println!("Error: API server not configured. Please set it in settings.");
+        return;
+    }
+    
+    log::info!("Using API server: {}", api_server);
+    
+    // Prepare login request
+    let login_url = format!("{}/api/login", api_server);
+    let device_info = json!({
+        "id": hbb_common::config::Config::get_id(),
+        "uuid": crate::ui_interface::get_uuid(),
+    });
+    
+    let login_data = json!({
+        "username": username,
+        "password": password,
+        "id": device_info["id"],
+        "uuid": device_info["uuid"],
+        "type": "account",
+    });
+    
+    // Make HTTP request (blocking)
+    let client = reqwest::blocking::Client::new();
+    match client
+        .post(&login_url)
+        .header("Content-Type", "application/json")
+        .json(&login_data)
+        .send()
+    {
+        Ok(response) => {
+            let status = response.status();
+            match response.text() {
+                Ok(body) => {
+                    if status.is_success() {
+                        match serde_json::from_str::<serde_json::Value>(&body) {
+                            Ok(json_body) => {
+                                if let Some(error) = json_body.get("error") {
+                                    log::error!("Login failed: {}", error);
+                                    println!("Login failed: {}", error);
+                                } else if let Some(access_token) = json_body.get("access_token") {
+                                    if let Some(token_str) = access_token.as_str() {
+                                        // Save access token
+                                        LocalConfig::set_option("access_token".to_string(), token_str.to_string());
+                                        
+                                        // Save user info
+                                        if let Some(user) = json_body.get("user") {
+                                            LocalConfig::set_option("user_info".to_string(), user.to_string());
+                                            if let Some(name) = user.get("name") {
+                                                log::info!("Login successful! Welcome {}", name);
+                                                println!("Login successful! Welcome {}", name);
+                                            } else {
+                                                log::info!("Login successful!");
+                                                println!("Login successful!");
+                                            }
+                                        } else {
+                                            log::info!("Login successful!");
+                                            println!("Login successful!");
+                                        }
+                                    } else {
+                                        log::error!("Invalid access token format");
+                                        println!("Error: Invalid access token format");
+                                    }
+                                } else {
+                                    log::error!("No access token in response");
+                                    println!("Error: No access token in response");
+                                }
+                            }
+                            Err(e) => {
+                                log::error!("Failed to parse response: {}", e);
+                                println!("Error: Failed to parse response: {}", e);
+                            }
+                        }
+                    } else {
+                        log::error!("Login failed with status {}: {}", status, body);
+                        println!("Login failed with status {}: {}", status, body);
+                    }
+                }
+                Err(e) => {
+                    log::error!("Failed to read response body: {}", e);
+                    println!("Error: Failed to read response body: {}", e);
+                }
+            }
+        }
+        Err(e) => {
+            log::error!("Failed to connect to API server: {}", e);
+            println!("Error: Failed to connect to API server: {}", e);
+        }
+    }
+}

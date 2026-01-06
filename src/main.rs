@@ -44,7 +44,10 @@ fn main() {
         "-p, --port-forward=[PORT-FORWARD-OPTIONS] 'Format: remote-id:local-port:remote-port[:remote-host]'
         -c, --connect=[REMOTE_ID] 'test only'
         -k, --key=[KEY] ''
-       -s, --server=[] 'Start server'",
+       -s, --server=[] 'Start server'
+       --login 'Login to account'
+       -u, --username=[USERNAME] 'Username for login'
+       --login-password=[LOGIN_PASSWORD] 'Password for login to account'",
     );
     let matches = App::new("rustdesk")
         .version(crate::VERSION)
@@ -96,6 +99,26 @@ fn main() {
         let key = matches.value_of("key").unwrap_or("").to_owned();
         let token = LocalConfig::get_option("access_token");
         cli::connect_test(p, key, token);
+    } else if let Some(_) = matches.value_of("login") {
+        let username = matches.value_of("username").unwrap_or("");
+        let password = matches.value_of("login-password").unwrap_or("");
+        if username.is_empty() || password.is_empty() {
+            log::error!("Username and password are required for login");
+            println!("Usage: rustdesk --login --username <USERNAME> --login-password <PASSWORD>");
+            return;
+        }
+        common::test_rendezvous_server();
+        cli::login(username.to_owned(), password.to_owned());
+    } else if matches.is_present("login") {
+        let username = matches.value_of("username").unwrap_or("");
+        let password = matches.value_of("login-password").unwrap_or("");
+        if username.is_empty() || password.is_empty() {
+            log::error!("Username and password are required for login");
+            println!("Usage: rustdesk --login --username <USERNAME> --login-password <PASSWORD>");
+            return;
+        }
+        common::test_rendezvous_server();
+        cli::login(username.to_owned(), password.to_owned());
     } else if let Some(p) = matches.value_of("server") {
         log::info!("id={}", hbb_common::config::Config::get_id());
         crate::start_server(true, false);
