@@ -212,7 +212,8 @@ pub fn login(username: String, password: String) {
     let login_url = format!("{}/api/login", api_server);
     let device_info = json!({
         "id": hbb_common::config::Config::get_id(),
-        "uuid": crate::ui_interface::get_uuid(),
+        // Avoid UI/GTK dependencies in CLI mode.
+        "uuid": crate::encode64(hbb_common::get_uuid()),
     });
     
     let login_data = json!({

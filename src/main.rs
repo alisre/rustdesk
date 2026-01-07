@@ -113,15 +113,6 @@ fn main() {
         let key = matches.value_of("key").unwrap_or("").to_owned();
         let token = LocalConfig::get_option("access_token");
         cli::connect_test(p, key, token);
-    } else if let Some(_) = matches.value_of("login") {
-        let username = matches.value_of("username").unwrap_or("");
-        let password = matches.value_of("login-password").unwrap_or("");
-        if username.is_empty() || password.is_empty() {
-            log::error!("Username and password are required for login");
-            println!("Usage: rustdesk --login --username <USERNAME> --login-password <PASSWORD>");
-            return;
-        }
-        cli::login(username.to_owned(), password.to_owned());
     } else if matches.is_present("login") {
         let username = matches.value_of("username").unwrap_or("");
         let password = matches.value_of("login-password").unwrap_or("");
