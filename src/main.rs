@@ -42,6 +42,7 @@ fn main() {
         -c, --connect=[REMOTE_ID] 'test only'
         -k, --key=[KEY] ''
        -s, --server=[] 'Start server'
+       --get-id 'Get ID'
        --login 'Login to account'
        -u, --username=[USERNAME] 'Username for login'
        --login-password=[LOGIN_PASSWORD] 'Password for login to account'",
@@ -55,13 +56,21 @@ fn main() {
     use hbb_common::{config::LocalConfig, env_logger::*};
     init_from_env(Env::default().filter_or(DEFAULT_FILTER_ENV, "info"));
     
-    // For login mode, skip global_init to avoid GUI initialization
+    // For login and get-id mode, skip global_init to avoid GUI initialization
     let is_login = matches.is_present("login");
-    if !is_login {
+    let is_get_id = matches.is_present("get-id");
+    if !is_login && !is_get_id {
         if !common::global_init() {
             return;
         }
     }
+    
+    // Handle --get-id first (no GUI needed)
+    if is_get_id {
+        println!("{}", hbb_common::config::Config::get_id());
+        return;
+    }
+    
     if let Some(p) = matches.value_of("port-forward") {
         let options: Vec<String> = p.split(":").map(|x| x.to_owned()).collect();
         if options.len() < 3 {
