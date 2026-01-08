@@ -430,6 +430,90 @@ pub fn core_main() -> Option<Vec<String>> {
         } else if args[0] == "--get-id" {
             println!("{}", crate::ipc::get_id());
             return None;
+        } else if args[0] == "--login" {
+            // CLI login without GUI initialization
+            let username = args.iter().position(|x| x == "--username" || x == "-u")
+                .and_then(|i| args.get(i + 1))
+                .map(|s| s.as_str())
+                .unwrap_or("");
+            let password = args.iter().position(|x| x == "--login-password")
+                .and_then(|i| args.get(i + 1))
+                .map(|s| s.as_str())
+                .unwrap_or("");
+            
+            if username.is_empty() || password.is_empty() {
+                println!("Usage: rustdesk --login --username <USERNAME> --login-password <PASSWORD>");
+            } else {
+                use hbb_common::config::LocalConfig;
+                use serde_json::json;
+                
+                let api_server = config::Config::get_option("api-server");
+                if api_server.is_empty() {
+                    println!("Error: API server not configured. Please set it in settings.");
+                } else {
+                    let login_url = format!("{}/api/login", api_server);
+                    let device_info = json!({
+                        "id": config::Config::get_id(),
+                        "uuid": crate::encode64(hbb_common::get_uuid()),
+                    });
+                    
+                    let login_data = json!({
+                        "username": username,
+                        "password": password,
+                        "id": device_info["id"],
+                        "uuid": device_info["uuid"],
+                        "type": "account",
+                    });
+                    
+                    match reqwest::blocking::Client::new()
+                        .post(&login_url)
+                        .header("Content-Type", "application/json")
+                        .json(&login_data)
+                        .send()
+                    {
+                        Ok(response) => {
+                            let status = response.status();
+                            match response.text() {
+                                Ok(body) => {
+                                    if status.is_success() {
+                                        match serde_json::from_str::<serde_json::Value>(&body) {
+                                            Ok(json_body) => {
+                                                if let Some(error) = json_body.get("error") {
+                                                    println!("Login failed: {}", error);
+                                                } else if let Some(access_token) = json_body.get("access_token") {
+                                                    if let Some(token_str) = access_token.as_str() {
+                                                        LocalConfig::set_option("access_token".to_string(), token_str.to_string());
+                                                        if let Some(user) = json_body.get("user") {
+                                                            LocalConfig::set_option("user_info".to_string(), user.to_string());
+                                                            if let Some(name) = user.get("name") {
+                                                                println!("Login successful! Welcome {}", name);
+                                                            } else {
+                                                                println!("Login successful!");
+                                                            }
+                                                        } else {
+                                                            println!("Login successful!");
+                                                        }
+                                                    } else {
+                                                        println!("Error: Invalid access token format");
+                                                    }
+                                                } else {
+                                                    println!("Error: No access token in response");
+                                                }
+                                            }
+                                            Err(e) => println!("Error: Failed to parse response: {}", e),
+                                        }
+                                    } else {
+                                        println!("Login failed with status {}: {}", status, body);
+                                    }
+                                }
+                                Err(e) => println!("Error: Failed to read response body: {}", e),
+                            }
+                        }
+                        Err(e) => println!("Error: Failed to connect to API server: {}", e),
+                    }
+                }
+            }
+            return None;
         } else if args[0] == "--set-id" {
             if config::is_disable_settings() {
                 println!("Settings are disabled!");
