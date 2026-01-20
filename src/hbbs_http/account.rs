@@ -340,6 +340,23 @@ impl OidcSession {
         });
     }
 
+    fn get_result_(&self) -> AuthResult {
+        AuthResult {
+            state_msg: self.state_msg.to_string(),
+            failed_msg: self.failed_msg.clone(),
+            url: self.code_url.as_ref().map(|x| x.url.to_string()),
+            auth_body: self.auth_body.clone(),
+        }
+    }
+
+    pub fn auth_cancel() {
+        OIDC_SESSION.write().unwrap().keep_querying = false;
+    }
+
+    pub fn get_result() -> AuthResult {
+        OIDC_SESSION.read().unwrap().get_result_()
+    }
+}
 
 /// CLI/非交互用户名密码登录,获取 access_token 并写入 LocalConfig。
 pub fn password_login(
@@ -365,9 +382,10 @@ pub fn password_login(
         .json(&body)
         .send()?;
     let status = resp.status();
-    let res: HbbHttpResponse<AuthBody> = resp.try_into().map_err(|e| {
-        hbb_common::anyhow!("Http status: {}, err: {}", status.as_u16(), e)
-    })?;
+    if !status.is_success() {
+        hbb_common::bail!("Http status: {}", status.as_u16());
+    }
+    let res: HbbHttpResponse<AuthBody> = resp.try_into()?;
 
     match res {
         HbbHttpResponse::Data(auth_body) => {
@@ -397,22 +415,5 @@ pub fn password_login(
         _ => {
             hbb_common::bail!("Unexpected login response");
         }
-    }
-}
-    fn get_result_(&self) -> AuthResult {
-        AuthResult {
-            state_msg: self.state_msg.to_string(),
-            failed_msg: self.failed_msg.clone(),
-            url: self.code_url.as_ref().map(|x| x.url.to_string()),
-            auth_body: self.auth_body.clone(),
-        }
-    }
-
-    pub fn auth_cancel() {
-        OIDC_SESSION.write().unwrap().keep_querying = false;
-    }
-
-    pub fn get_result() -> AuthResult {
-        OIDC_SESSION.read().unwrap().get_result_()
     }
 }
