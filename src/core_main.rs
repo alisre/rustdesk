@@ -47,10 +47,36 @@ pub fn core_main() -> Option<Vec<String>> {
     let mut _is_flutter_invoke_new_connection = false;
     let mut no_server = false;
     let mut arg_exe = Default::default();
+
+    // CLI 登录参数
+    let mut cli_username: Option<String> = None;
+    let mut cli_password: Option<String> = None;
+    let mut cli_api_server: Option<String> = None;
+    let mut expect_username = false;
+    let mut expect_password = false;
+    let mut expect_api = false;
+
     for arg in std::env::args() {
         if i == 0 {
             arg_exe = arg;
         } else if i > 0 {
+            // 处理值参数
+            if expect_username {
+                cli_username = Some(arg.clone());
+                expect_username = false;
+                continue;
+            }
+            if expect_password {
+                cli_password = Some(arg.clone());
+                expect_password = false;
+                continue;
+            }
+            if expect_api {
+                cli_api_server = Some(arg.clone());
+                expect_api = false;
+                continue;
+            }
+
             #[cfg(feature = "flutter")]
             if [
                 "--connect",
@@ -73,11 +99,55 @@ pub fn core_main() -> Option<Vec<String>> {
                 _is_quick_support = true;
             } else if arg == "--no-server" {
                 no_server = true;
+            } else if arg == "--username" {
+                expect_username = true;
+            } else if arg.starts_with("--username=") {
+                cli_username = Some(arg[11..].to_string());
+            } else if arg == "--passwd" || arg == "--password" {
+                expect_password = true;
+            } else if arg.starts_with("--passwd=") {
+                cli_password = Some(arg[9..].to_string());
+            } else if arg.starts_with("--password=") {
+                cli_password = Some(arg[11..].to_string());
+            } else if arg == "--api-server" {
+                expect_api = true;
+            } else if arg.starts_with("--api-server=") {
+                cli_api_server = Some(arg[13..].to_string());
             } else {
                 args.push(arg);
             }
         }
         i += 1;
+    }
+
+    // 执行 CLI 非交互登录: rustdesk --username xxx --passwd yyy [--api-server https://api]
+    if cli_username.is_some() || cli_password.is_some() || cli_api_server.is_some() {
+        let username = cli_username.unwrap_or_default();
+        let password = cli_password.unwrap_or_default();
+        if username.is_empty() || password.is_empty() {
+            log::error!("Missing --username/--passwd for CLI login");
+            my_println!("Error: Missing --username/--passwd for CLI login");
+            return None;
+        }
+        let api_server = cli_api_server.unwrap_or_else(|| crate::ui_interface::get_api_server());
+        if api_server.is_empty() {
+            log::error!("API server not configured. Use --api-server or configure it first.");
+            my_println!("Error: API server not configured. Use --api-server https://your-server");
+            return None;
+        }
+        log::info!("Performing CLI login to {}", api_server);
+        match crate::hbbs_http::account::password_login(&api_server, &username, &password, true) {
+            Ok(auth) => {
+                log::info!("CLI login success, user={}, token_len={}", auth.user.name, auth.access_token.len());
+                my_println!("Login success! User: {}", auth.user.name);
+                return None;
+            }
+            Err(e) => {
+                log::error!("CLI login failed: {}", e);
+                my_println!("Login failed: {}", e);
+                return None;
+            }
+        }
     }
     #[cfg(any(target_os = "linux", target_os = "windows"))]
     if args.is_empty() {

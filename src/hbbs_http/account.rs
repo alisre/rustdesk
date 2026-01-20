@@ -10,6 +10,7 @@ use std::{
     time::{Duration, Instant},
 };
 use url::Url;
+use hbb_common::config::Config;
 
 lazy_static::lazy_static! {
     static ref OIDC_SESSION: Arc<RwLock<OidcSession>> = Arc::new(RwLock::new(OidcSession::new()));
@@ -339,6 +340,65 @@ impl OidcSession {
         });
     }
 
+
+/// CLI/非交互用户名密码登录,获取 access_token 并写入 LocalConfig。
+pub fn password_login(
+    api_server: &str,
+    username: &str,
+    password: &str,
+    remember_me: bool,
+) -> ResultType<AuthBody> {
+    let login_option_url = format!("{}/api/login-options", api_server);
+    let client = create_http_client_with_url(&login_option_url);
+
+    let body = serde_json::json!({
+        "username": username,
+        "password": password,
+        "id": Config::get_id(),
+        "uuid": crate::ui_interface::get_uuid(),
+        "type": "account",
+        "deviceInfo": crate::ui_interface::get_login_device_info(),
+    });
+
+    let resp = client
+        .post(format!("{}/api/login", api_server))
+        .json(&body)
+        .send()?;
+    let status = resp.status();
+    let res: HbbHttpResponse<AuthBody> = resp.try_into().map_err(|e| {
+        hbb_common::anyhow!("Http status: {}, err: {}", status.as_u16(), e)
+    })?;
+
+    match res {
+        HbbHttpResponse::Data(auth_body) => {
+            // 处理需要二次验证的情况
+            if auth_body.r#type == "email_check" {
+                hbb_common::bail!(
+                    "Server requires verification code (email/2FA). CLI login not completed."
+                );
+            }
+
+            if remember_me {
+                LocalConfig::set_option("access_token".to_owned(), auth_body.access_token.clone());
+                LocalConfig::set_option(
+                    "user_info".to_owned(),
+                    serde_json::json!({
+                        "name": auth_body.user.name,
+                        "status": auth_body.user.status
+                    })
+                    .to_string(),
+                );
+            }
+            Ok(auth_body)
+        }
+        HbbHttpResponse::Error(err) => {
+            hbb_common::bail!(err);
+        }
+        _ => {
+            hbb_common::bail!("Unexpected login response");
+        }
+    }
+}
     fn get_result_(&self) -> AuthResult {
         AuthResult {
             state_msg: self.state_msg.to_string(),
