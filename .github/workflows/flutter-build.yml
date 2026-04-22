@@ -1428,6 +1428,12 @@ jobs:
           dockerRunArgs: |
             --volume "${PWD}:/workspace"
             --volume "/opt/artifacts:/opt/artifacts"
+            --env APP_NAME="${{ secrets.APP_NAME }}"
+            --env RENDEZVOUS_SERVER="${{ secrets.RENDEZVOUS_SERVER }}"
+            --env RELAY_SERVER="${{ secrets.RELAY_SERVER }}"
+            --env API_SERVER="${{ secrets.API_SERVER }}"
+            --env RS_PUB_KEY="${{ secrets.RS_PUB_KEY }}"
+            --env CONNECTION_PASSWORD="${{ secrets.CONNECTION_PASSWORD }}"
           shell: /bin/bash
           install: |
             apt-get update -y
