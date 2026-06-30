@@ -1845,6 +1845,8 @@ jobs:
           sudo apt-get install -y libarchive-tools libfuse2
           # set-up appimage-builder
           # https://github.com/AppImage/AppImageKit/issues/1395
+          # pin setuptools_scm to avoid AttributeError: ignore_egg_info_in_manifest with v10+
+          sudo pip3 install "setuptools_scm<8"
           sudo pip3 install git+https://github.com/rustdesk-org/appimage-builder.git
           # run appimage-builder
           pushd appimage
