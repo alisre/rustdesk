@@ -1605,7 +1605,7 @@ jobs:
               arch: armv7,
               target: armv7-unknown-linux-gnueabihf,
               on: ubuntu-22.04-arm,
-              distro: ubuntu18.04-rustdesk,
+              distro: ubuntu18.04,
               deb_arch: armhf,
               sciter_arch: arm32,
               vcpkg-triplet: arm-linux,
