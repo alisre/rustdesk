@@ -58,7 +58,6 @@ env:
   #signing keys env variable checks
   APP_NAME: "${{ secrets.APP_NAME }}"
   RENDEZVOUS_SERVER: "${{ secrets.RENDEZVOUS_SERVER }}"
-  RENDEZVOUS_PORT: "${{ secrets.RENDEZVOUS_PORT }}"
   RELAY_SERVER: "${{ secrets.RELAY_SERVER }}"
   API_SERVER: "${{ secrets.API_SERVER }}"
   RS_PUB_KEY: "${{ secrets.RS_PUB_KEY }}"
