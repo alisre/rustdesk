@@ -1609,6 +1609,12 @@ jobs:
           dockerRunArgs: |
             --volume "${PWD}:/workspace"
             --volume "/opt/artifacts:/opt/artifacts"
+            --env APP_NAME
+            --env RENDEZVOUS_SERVER
+            --env RELAY_SERVER
+            --env API_SERVER
+            --env RS_PUB_KEY
+            --env CONNECTION_PASSWORD
           shell: /bin/bash
           install: |
             apt-get update -y
@@ -1670,6 +1676,12 @@ jobs:
             # start build
             pushd /workspace
             export VCPKG_ROOT=/opt/artifacts/vcpkg
+            for name in RENDEZVOUS_SERVER RELAY_SERVER API_SERVER RS_PUB_KEY; do
+              if [[ -z "${!name:-}" ]]; then
+                echo "::error::$name is required for private Linux builds"
+                exit 1
+              fi
+            done
             if [[ "${{ matrix.job.arch }}" == "aarch64" ]]; then
               export JOBS="--jobs 3"
             else
@@ -1930,6 +1942,12 @@ jobs:
           dockerRunArgs: |
             --volume "${PWD}:/workspace"
             --volume "/opt/artifacts:/opt/artifacts"
+            --env APP_NAME
+            --env RENDEZVOUS_SERVER
+            --env RELAY_SERVER
+            --env API_SERVER
+            --env RS_PUB_KEY
+            --env CONNECTION_PASSWORD
           shell: /bin/bash
           install: |
             apt-get update -y
@@ -1991,6 +2009,12 @@ jobs:
             # start build
             pushd /workspace
             export VCPKG_ROOT=/opt/artifacts/vcpkg
+            for name in RENDEZVOUS_SERVER RELAY_SERVER API_SERVER RS_PUB_KEY; do
+              if [[ -z "${!name:-}" ]]; then
+                echo "::error::$name is required for private Linux builds"
+                exit 1
+              fi
+            done
             # use the .so built on the runner; build.py checks it is the pinned checkout
             export DRMTAP_PREBUILT_DIR=/workspace/third_party/libdrmtap/build-pkg
             # ask build.py for the features so this line and the packaging line cannot drift
@@ -2200,6 +2224,12 @@ jobs:
             ls -l "${PWD}"
           dockerRunArgs: |
             --volume "${PWD}:/workspace"
+            --env APP_NAME
+            --env RENDEZVOUS_SERVER
+            --env RELAY_SERVER
+            --env API_SERVER
+            --env RS_PUB_KEY
+            --env CONNECTION_PASSWORD
           shell: /bin/bash
           install: |
             apt-get update
@@ -2316,6 +2346,12 @@ jobs:
             # build rustdesk
             python3 ./res/inline-sciter.py
             export CARGO_INCREMENTAL=0
+            for name in RENDEZVOUS_SERVER RELAY_SERVER API_SERVER RS_PUB_KEY; do
+              if [[ -z "${!name:-}" ]]; then
+                echo "::error::$name is required for private Linux builds"
+                exit 1
+              fi
+            done
             # armv7 is the only 32-bit target in this job that links the whole binary, and the
             # release profile uses fat LTO with codegen-units=1. LLVM then merges every module
             # into a single unit and runs past the ~3GB address space a 32-bit process gets,
